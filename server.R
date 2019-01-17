@@ -11,6 +11,7 @@ library(xlsx)
 library(futile.logger)
 library(tidyverse)
 library(Hmisc)
+library(grid)
 
 futile.logger::flog.threshold(futile.logger::ERROR, name = "violinplotsLogger")
 
@@ -75,72 +76,75 @@ shinyServer(function(input, output, session) {
     return(D)
   })
   
-  output$violinplot <- renderPlot({
-    data<-plot.data()
-    
-    if ( input$groups == "--select--" ){
+  observe({ 
+    output$violinplot <- renderPlot({
+      data<-plot.data()
       
-      p <- ggplot(data, aes(x=x, y=y)) + theme_classic() 
-      p <- p + geom_violin(trim=input$trim, fill="gray")
-    
-      # mean and std as line
-      if (isTRUE(input$meanstd)){
-        p <- p + stat_summary(fun.data=mean_sdl, mult=1, 
-                              geom="pointrange", color="red", position=position_dodge(0))
+      if ( input$groups == "--select--" ){
+        
+        p <- ggplot(data, aes(x=x, y=y)) + theme_classic() 
+        p <- p + geom_violin(trim=input$trim, fill="gray")
+      
+        # mean and std as line
+        if (isTRUE(input$meanstd)){
+          p <- p + stat_summary(fun.data=mean_sdl, mult=1, 
+                                geom="pointrange", color="red", position=position_dodge(0))
+        }
+        
+        # add box
+        if (isTRUE(input$box)){
+          p <- p + geom_boxplot(width=0.1, position=position_dodge(0))
+        }
+        
+        # add dots
+        if (isTRUE(input$dots)){
+          p <- p + geom_dotplot(binaxis='y', stackdir='center',
+                                position=position_dodge(0),  dotsize=input$dotsize)
+        }
+        
+        # median
+        if (isTRUE(input$median)){
+          p <- p + stat_summary(fun.y=median, geom="point", position=position_dodge(0), size=input$dotsize, color="red")
+        }
+        
+        
+      } else {
+  
+        p <- ggplot(data, aes(x=x, y=y, fill=groups)) + theme_classic() 
+        p <- p + geom_violin(trim=input$trim)
+        
+        # mean and std as line
+        if (isTRUE(input$meanstd)){
+          p <- p + stat_summary(fun.data=mean_sdl, mult=1, 
+                                geom="pointrange", color="red", position=position_dodge(input$dodge))
+        }
+        
+        # add box
+        if (isTRUE(input$box)){
+          p <- p + geom_boxplot(width=0.1, position=position_dodge(input$dodge))
+        }
+        
+        # add dots
+        if (isTRUE(input$dots)){
+          p <- p + geom_dotplot(binaxis='y', stackdir='center',
+                                position=position_dodge(input$dodge),  dotsize=input$dotsize)
+        }
+        
+        # median
+        if (isTRUE(input$median)){
+          p <- p + stat_summary(fun.y=median, geom="point", position=position_dodge(input$dodge), size=input$dotsize, color="red")
+        }
+        
       }
-      
-      # add box
-      if (isTRUE(input$box)){
-        p <- p + geom_boxplot(width=0.1, position=position_dodge(0))
-      }
-      
-      # add dots
-      if (isTRUE(input$dots)){
-        p <- p + geom_dotplot(binaxis='y', stackdir='center',
-                              position=position_dodge(0),  dotsize=input$dotsize)
-      }
-      
-      # median
-      if (isTRUE(input$median)){
-        p <- p + stat_summary(fun.y=median, geom="point", position=position_dodge(0), size=input$dotsize, color="red")
-      }
-      
-      
-    } else {
-
-      p <- ggplot(data, aes(x=x, y=y, fill=groups)) + theme_classic() 
-      p <- p + geom_violin(trim=input$trim)
-      
-      # mean and std as line
-      if (isTRUE(input$meanstd)){
-        p <- p + stat_summary(fun.data=mean_sdl, mult=1, 
-                              geom="pointrange", color="red", position=position_dodge(input$dodge))
-      }
-      
-      # add box
-      if (isTRUE(input$box)){
-        p <- p + geom_boxplot(width=0.1, position=position_dodge(input$dodge))
-      }
-      
-      # add dots
-      if (isTRUE(input$dots)){
-        p <- p + geom_dotplot(binaxis='y', stackdir='center',
-                              position=position_dodge(input$dodge),  dotsize=input$dotsize)
-      }
-      
-      # median
-      if (isTRUE(input$median)){
-        p <- p + stat_summary(fun.y=median, geom="point", position=position_dodge(input$dodge), size=input$dotsize, color="red")
-      }
-      
-    }
-    p <- p + ggtitle(input$title) + xlab(input$xlabel) + ylab(input$ylabel) + 
-      theme(plot.title = element_text(hjust = 0.5, size = input$fontsize.title),
-            axis.text = element_text(colour="black", size = input$fontsize.axis),
-            axis.title = element_text(colour="black", size = input$fontsize.axis),
-            legend.text = element_text(colour="black", size = input$fontsize.legend),
-            legend.title = element_text(colour="black", size = input$fontsize.legend) )
-    p
+      p <- p + ggtitle(input$title) + xlab(input$xlabel) + ylab(input$ylabel) + 
+        theme(plot.title = element_text(hjust = 0.5, size = input$fontsize.title),
+              axis.text = element_text(colour="black", size = input$fontsize.axis),
+              axis.title = element_text(colour="black", size = input$fontsize.axis),
+              legend.text = element_text(colour="black", size = input$fontsize.legend),
+              legend.title = element_text(colour="black", size = input$fontsize.legend) )
+      p
+    }, height = input$plotheight, width =  input$plotwidth )
+  
   })
   
   
@@ -221,9 +225,8 @@ shinyServer(function(input, output, session) {
               legend.title = element_text(colour="black", size = input$fontsize.legend) )
       p
       # plot
-      ggsave(filename)
-      # close device
-      #dev.off()
+      ggsave(filename, width=convertUnit(unit(input$plotwidth, "points"), "inches", valueOnly=TRUE),
+             height=convertUnit(unit(input$plotheight, "points"), "inches", valueOnly=TRUE) )
     }
   )
   

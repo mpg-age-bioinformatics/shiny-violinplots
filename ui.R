@@ -42,11 +42,13 @@ shinyUI( fluidPage(
               textInput("ylabel", "Y-axis label", "y-axis"),
               sliderInput("fontsize.title", "Title font size", min = 8, max = 50, value = 32, step = 1),
               sliderInput("fontsize.axis", "Axes font size", min = 8, max = 32, value = 18, step = 1),
-              sliderInput("fontsize.legend", "Legend font size", min = 8, max = 32, value = 14, step = 1)
+              sliderInput("fontsize.legend", "Legend font size", min = 8, max = 32, value = 14, step = 1),
+              numericInput("plotwidth", "Plot width", 600),
+              numericInput("plotheight", "Plot height", 400)
       )
     )),
     mainPanel(
-      plotOutput("violinplot", height = '500px', width = 'auto'),
+      plotOutput("violinplot", height = 'auto', width = 'auto'),
       downloadButton('downloadPlot', 'Download Plot'),
       br(), br(),
       p("This App uses the gplot2 package. For more information read the respective documentation in",
